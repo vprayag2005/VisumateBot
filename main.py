@@ -171,11 +171,11 @@ if __name__== '__main__':
         base_path = "C:/VIDEO_AI"
     else:
         base_path = "/opt/render/project/src"
-    if not (os.path.exists(f"{base_path}/temp_audio")):
+    if not (os.path.exists(f"{base_path}/temp_audios")):
         os.mkdir(f"{base_path}/temp_audios")
     if not(os.path.exists(f"{base_path}/temp_images")):
         os.mkdir(f"{base_path}/temp_images")
-    if not(os.path.exists(f"{base_path}/temp_video")):
+    if not(os.path.exists(f"{base_path}/temp_videos")):
         os.mkdir(f"{base_path}/temp_videos")  
 
     app= Application.builder().token(TOKEN).build()
