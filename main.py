@@ -16,6 +16,7 @@ load_dotenv()
 
 TOKEN:Final=os.getenv("API_KEY")
 BOT_USERNAME=os.getenv("BOT_USERNAME")
+flag:bool=True
 
 user_list:list=[]
 
@@ -146,8 +147,14 @@ async def error(update:Update,context:ContextTypes.DEFAULT_TYPE):
     print(f'update {update} caused error {context.error}')
 
 if __name__== '__main__':
-    app= Application.builder().token(TOKEN).build()
     
+    if(flag==True):
+        os.mkdir("C:/VIDEO_AI/temp_audio")
+        os.mkdir("C:/VIDEO_AI/temp_images")
+        os.mkdir("C:/VIDEO_AI/temp_video")
+        flag=False
+    app= Application.builder().token(TOKEN).build()
+
     #commands
     app.add_handler(CommandHandler('start',startcommand))
     app.add_handler(CommandHandler('landscapevideo',landscapevideocommand))
