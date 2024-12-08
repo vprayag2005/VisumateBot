@@ -43,12 +43,19 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
                 text:str=""
                 for i in text_list:
                     text+=f'{i} '
+                await update.message.reply_text("Generating Script ....")
                 script_video=script(text)
+                await update.message.reply_text("Script Generated sucessfull")
                 os.mkdir(path_image)
                 os.mkdir(path_voice)
                 os.mkdir(path_video)
+                await update.message.reply_text("Finding images for your video .....")
                 generate_image(path_image,script_video)
+                await update.message.reply_text("Image founded Sucessfully")
+                await update.message.reply_text("Generating voices for your video....")
                 generate_voice(path_voice,script_video)
+                await update.message.reply_text("Voice generated sucessfully")
+                await update.message.reply_text("Combining all togther to make video..")
                 generate_video(path_video,path_image,path_voice,len(script_video))
                 await update.message.reply_video(f"{path_video}/video.mp4")
                 for i in range (0,len(script_video)):
@@ -75,11 +82,11 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
         path_voice =  os.path.join(base_path,f'temp_audios/{user_id}')
         path_video =  os.path.join(base_path,f'temp_videos/{user_id}')
         if(os.path.exists(path_image)):
-            os.rmdir(path_video)
-        if(os.path.exists(path_video)):
-            os.rmdir(path_voice)
-        if(os.path.exists(path_voice)):
             os.rmdir(path_image)
+        if(os.path.exists(path_voice)):
+            os.rmdir(path_voice)
+        if(os.path.exists(path_video)):
+            os.rmdir(path_video)
         print(e)
         await update.message.reply_text(e)
 # generates normal message responses
