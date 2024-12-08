@@ -28,7 +28,7 @@ async def startcommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
 
 async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
     try:
-        if(len(user_list)<2):
+        if(len(user_list)<10):
             if platform.system() == "Windows":
                 base_path = "C:/VIDEO_AI/"
             else:
