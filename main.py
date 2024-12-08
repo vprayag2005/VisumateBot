@@ -74,19 +74,6 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
             await update.message.reply_text("Server is busy please try after some times")
 
     except Exception as e:
-        if platform.system() == "Windows":
-            base_path = "C:/VIDEO_AI/"
-        else:
-            base_path = "/opt/render/project/src/"
-        path_image = os.path.join(base_path,f'temp_images/{user_id}')
-        path_voice =  os.path.join(base_path,f'temp_audios/{user_id}')
-        path_video =  os.path.join(base_path,f'temp_videos/{user_id}')
-        if(os.path.exists(path_image)):
-            os.rmdir(path_image)
-        if(os.path.exists(path_voice)):
-            os.rmdir(path_voice)
-        if(os.path.exists(path_video)):
-            os.rmdir(path_video)
         print(e)
         await update.message.reply_text(e)
 # generates normal message responses
