@@ -6,6 +6,7 @@ import wave
 import platform
 import time
 from PIL import Image
+from flask import Flask, request, jsonify
 from apscheduler.schedulers.blocking import BlockingScheduler
 from moviepy import VideoFileClip, CompositeVideoClip,CompositeAudioClip, vfx, ImageClip, concatenate_videoclips,concatenate_audioclips, AudioFileClip
 from typing import Final
@@ -21,10 +22,15 @@ flag:bool=True
 
 user_list:list=[]
 
+# Initialize the Flask app
+app = Flask(__name__)
+
 #telegram bot start commands
+@app.route('/start', methods=['POST'])
 async def startcommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hi, I'm VisumateBot! Share your topic, and I'll transform it into an amazing video for you.")
 
+@app.route('/landscapevideo', methods=['POST'])
 async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
     try:
         if(len(user_list)<2):
@@ -73,6 +79,7 @@ def handle_responses(text:str)->str:
     return 
 
 #normal chat message handle
+@app.route('/handlemessage', methods=['POST'])
 async def handle_message(update:Update,context:ContextTypes.DEFAULT_TYPE):
     message_type:str=update.message.chat.type
     text:str=update.message.text
@@ -148,11 +155,13 @@ def limit_user():
     for i in user_list:
         user_list.remove(i)
 #fetch errors
+@app.route('/error', methods=['POST'])
 async def error(update:Update,context:ContextTypes.DEFAULT_TYPE):
     print(f'update {update} caused error {context.error}')
 
 if __name__== '__main__':
-    
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
     if(flag==True):
         if platform.system() == "Windows":
             base_path = "C:/VIDEO_AI/"
