@@ -3,6 +3,7 @@ import os
 import requests
 import pyttsx3
 import wave
+import platform
 import time
 from PIL import Image
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -27,11 +28,15 @@ async def startcommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
 async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
     try:
         if(len(user_list)<2):
+            if platform.system() == "Windows":
+                base_path = "C:/VIDEO_AI/"
+            else:
+                base_path = "/opt/render/project/src/"
             user_id=update.message.chat.id
             user_list.append(user_id)
-            path_image = f'C:/VIDEO_AI/temp_images/{user_id}'
-            path_voice = f'C:/VIDEO_AI/temp_audio/{user_id}'
-            path_video = f'C:/VIDEO_AI/temp_video/{user_id}'
+            path_image = os.path.join(base_path,f'temp_images/{user_id}')
+            path_voice =  os.path.join(base_path,f'temp_audios/{user_id}')
+            path_video =  os.path.join(base_path,f'temp_videos/{user_id}')
             text_list:list=context.args
             if(len(text_list)!=0):
                 text:str=""
@@ -46,12 +51,12 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
                 generate_video(path_video,path_image,path_voice,len(script_video))
                 await update.message.reply_video(f"{path_video}/video.mp4")
                 for i in range (0,len(script_video)):
-                    os.remove(f'C:/VIDEO_AI/temp_images/{user_id}/img{i+1}.jpeg')
-                    os.remove(f'C:/VIDEO_AI/temp_video/{user_id}/video{i+1}.mp4')
-                    os.remove(f'C:/VIDEO_AI/temp_audio/{user_id}/voice{i+1}')
-                os.remove("C:/VIDEO_AI/temp_video/2065059159/video.mp4")
-                os.remove("C:/VIDEO_AI/temp_video/2065059159/output.mp4")
-                os.remove("C:/VIDEO_AI/temp_audio/2065059159/outputaudio.mp3")
+                    os.remove(f'{path_image}/img{i+1}.jpeg')
+                    os.remove(f'{path_video}/video{i+1}.mp4')
+                    os.remove(f'{path_voice}/voice{i+1}')
+                os.remove(f"{path_video}/video.mp4")
+                os.remove(f"{path_video}/output.mp4")
+                os.remove(f"{path_voice}outputaudio.mp3")
                 os.rmdir(path_video)
                 os.rmdir(path_voice)
                 os.rmdir(path_image)
@@ -149,9 +154,13 @@ async def error(update:Update,context:ContextTypes.DEFAULT_TYPE):
 if __name__== '__main__':
     
     if(flag==True):
-        os.mkdir("C:/VIDEO_AI/temp_audio")
-        os.mkdir("C:/VIDEO_AI/temp_images")
-        os.mkdir("C:/VIDEO_AI/temp_video")
+        if platform.system() == "Windows":
+            base_path = "C:/VIDEO_AI/"
+        else:
+            base_path = "/opt/render/project/src/"
+        os.mkdir(f"{base_path}/temp_audio")
+        os.mkdir(f"{base_path}/temp_images")
+        os.mkdir(f"{base_path}/temp_video")
         flag=False
     app= Application.builder().token(TOKEN).build()
 
