@@ -28,7 +28,7 @@ async def startcommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
 
 async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
     try:
-        if(len(user_list)<10):
+        if(len(user_list)<4):
             if platform.system() == "Windows":
                 base_path = "C:/VIDEO_AI/"
             else:
@@ -57,7 +57,7 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
                     os.remove(f'{path_voice}/voice{i+1}')
                 os.remove(f"{path_video}/video.mp4")
                 os.remove(f"{path_video}/output.mp4")
-                os.remove(f"{path_voice}outputaudio.mp3")
+                os.remove(f"{path_voice}/outputaudio.mp3")
                 os.rmdir(path_video)
                 os.rmdir(path_voice)
                 os.rmdir(path_image)
@@ -155,13 +155,13 @@ async def error(update:Update,context:ContextTypes.DEFAULT_TYPE):
 if __name__== '__main__':
 
     if platform.system() == "Windows":
-        base_path = "C:/VIDEO_AI/"
+        base_path = "C:/VIDEO_AI"
     else:
-        base_path = "/opt/render/project/src/"
+        base_path = "/opt/render/project/src"
     if(not(os.path.exists(f"{base_path}/temp_audio" and f"{base_path}/temp_audio" and f"{base_path}/temp_video" ))):
-        os.mkdir(f"{base_path}/temp_audio")
+        os.mkdir(f"{base_path}/temp_audios")
         os.mkdir(f"{base_path}/temp_images")
-        os.mkdir(f"{base_path}/temp_video")  
+        os.mkdir(f"{base_path}/temp_videos")  
 
     app= Application.builder().token(TOKEN).build()
 
