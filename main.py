@@ -12,7 +12,7 @@ from typing import Final
 from telegram import Update
 from telegram.ext import Application,CommandHandler,MessageHandler,filters,ContextTypes
 from dotenv import load_dotenv
-from keep_alive import keep_alive
+from keep_alive import keep_alive,index
 
 keep_alive()
 load_dotenv()
@@ -68,6 +68,7 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
 
     except Exception as e:
         print(e)
+        index(e)
         await update.message.reply_text("Technical issue")
 # generates normal message responses
 def handle_responses(text:str)->str:
