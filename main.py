@@ -25,6 +25,10 @@ user_list:list=[]
 
 #telegram bot start commands
 async def startcommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
+    engine = pyttsx3.init()
+    voices = engine.getProperty('voices')
+    for voice in voices:
+        await update.message.reply_text(f"Voice ID: {voice.id}, Name: {voice.name}")
     await update.message.reply_text("Hi, I'm VisumateBot! Share your topic, and I'll transform it into an amazing video for you.")
 
 async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
