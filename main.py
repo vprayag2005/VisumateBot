@@ -12,6 +12,9 @@ from typing import Final
 from telegram import Update
 from telegram.ext import Application,CommandHandler,MessageHandler,filters,ContextTypes
 from dotenv import load_dotenv
+from keep_alive import keep_alive
+
+keep_alive()
 
 load_dotenv()
 
@@ -30,7 +33,7 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
             if platform.system() == "Windows":
                 base_path = "C:/VIDEO_AI/"
             else:
-                base_path = "/home/prayagv007/visumatebot/"
+                base_path = "/opt/render/project/src/"
             user_id=update.message.chat.id
             user_list.append(user_id)
             path_image = os.path.join(base_path,f'temp_images/{user_id}')
@@ -166,7 +169,7 @@ if __name__== '__main__':
     if platform.system() == "Windows":
         base_path = "C:/VIDEO_AI"
     else:
-        base_path = "/home/prayagv007/visumatebot"
+        base_path = "/opt/render/project/src"
     if not (os.path.exists(f"{base_path}/temp_audios")):
         os.mkdir(f"{base_path}/temp_audios")
     if not(os.path.exists(f"{base_path}/temp_images")):
