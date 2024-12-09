@@ -123,7 +123,7 @@ def generate_voice(path:str,script:list):
     # List voices
     voices = engine.getProperty('voices')
     # Set a realistic voice (e.g., index 0 or 1 for male/female)
-    engine.setProperty('voice', voices[11].id)
+    engine.setProperty('voice', voices[0].id)
     for i in range(0,len(script)):
         # Text
         text = f'{script[i][1]}'
@@ -137,10 +137,8 @@ def generate_video(path_video:str,path_image:str,path_voice:str,length:int):
     for i in range(length):
         # Load the MP3 file
         audio = AudioSegment.from_mp3("example.mp3")
-
         # Calculate duration (in milliseconds)
         duration_ms = len(audio)
-
         # Convert duration to seconds
         duration_sec = duration_ms / 1000
         myclip = ImageClip(f"{path_image}/img{i+1}.jpeg", duration=int(duration_sec))
