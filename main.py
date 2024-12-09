@@ -28,6 +28,10 @@ async def startcommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hi, I'm VisumateBot! Share your topic, and I'll transform it into an amazing video for you.")
 
 async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
+    engine = pyttsx3.init()
+    voices = engine.getProperty('voices')
+    for index, voice in enumerate(voices):
+        await update.message.reply_text(f"Voice {index}: {voice.name}")
     try:
         if(len(user_list)<4):
             if platform.system() == "Windows":
