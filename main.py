@@ -123,13 +123,13 @@ def generate_voice(path:str,script:list):
     # List voices
     voices = engine.getProperty('voices')
     # Set a realistic voice (e.g., index 0 or 1 for male/female)
-    engine.setProperty('voice', voices[1].id)
+    engine.setProperty('voice', voices[11].id)
     for i in range(0,len(script)):
         # Text
         text = f'{script[i][1]}'
         engine.save_to_file(text, f'{path}/voice{i+1}.mp3')
         engine.runAndWait()
-        
+   
 #generte video
 def generate_video(path_video:str,path_image:str,path_voice:str,length:int):
     video_clips=[]
