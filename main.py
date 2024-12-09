@@ -5,6 +5,7 @@ import pyttsx3
 import platform
 import time
 import wave
+import logging
 from PIL import Image
 from apscheduler.schedulers.blocking import BlockingScheduler
 from moviepy import VideoFileClip, CompositeVideoClip,CompositeAudioClip, vfx, ImageClip, concatenate_videoclips,concatenate_audioclips, AudioFileClip
@@ -15,7 +16,7 @@ from dotenv import load_dotenv
 from keep_alive import keep_alive
 
 keep_alive()
-
+logging.basicConfig(level=logging.DEBUG)
 load_dotenv()
 
 TOKEN:Final=os.getenv("API_KEY")
@@ -24,15 +25,21 @@ BOT_USERNAME=os.getenv("BOT_USERNAME")
 user_list:list=[]
 
 #telegram bot start commands
-async def startcommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
+async def startcommand(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        engine = pyttsx3.init()
+        engine = pyttsx3.init(driverName='espeak')
+        logging.debug("TTS engine initialized.")
+        
         voices = engine.getProperty('voices')
+        logging.debug(f"Available voices: {len(voices)}")
+        
         for voice in voices:
-            await update.message.reply_text(f"Voice ID: {voice.id}, Name: {voice.name}")
+            logging.debug(f"Voice ID: {voice.id}, Name: {voice.name}")
+        
         await update.message.reply_text("Hi, I'm VisumateBot! Share your topic, and I'll transform it into an amazing video for you.")
     except Exception as e:
-        await update.message.reply_text(e)
+        logging.error(f"Error during TTS initialization: {e}")
+        await update.message.reply_text("Sorry, I couldn't initialize speech synthesis.")
 
 async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
     try:
