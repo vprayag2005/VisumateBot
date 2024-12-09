@@ -2,9 +2,9 @@ import google.generativeai as genai
 import os
 import requests
 import pyttsx3
-import wave
 import platform
 import time
+from pydub import AudioSegment
 from PIL import Image
 from apscheduler.schedulers.blocking import BlockingScheduler
 from moviepy import VideoFileClip, CompositeVideoClip,CompositeAudioClip, vfx, ImageClip, concatenate_videoclips,concatenate_audioclips, AudioFileClip
@@ -12,9 +12,7 @@ from typing import Final
 from telegram import Update
 from telegram.ext import Application,CommandHandler,MessageHandler,filters,ContextTypes
 from dotenv import load_dotenv
-from keep_alive import keep_alive
 
-keep_alive()
 load_dotenv()
 
 TOKEN:Final=os.getenv("API_KEY")
@@ -32,7 +30,7 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
             if platform.system() == "Windows":
                 base_path = "C:/VIDEO_AI/"
             else:
-                base_path = "/opt/render/project/src/"
+                base_path = "/home/prayagv007/visumatebot/"
             user_id=update.message.chat.id
             user_list.append(user_id)
             path_image = os.path.join(base_path,f'temp_images/{user_id}')
@@ -61,7 +59,7 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
                 for i in range (0,len(script_video)):
                     os.remove(f'{path_image}/img{i+1}.jpeg')
                     os.remove(f'{path_video}/video{i+1}.mp4')
-                    os.remove(f'{path_voice}/voice{i+1}')
+                    os.remove(f'{path_voice}/voice{i+1}.mp3')
                 os.remove(f"{path_video}/video.mp4")
                 os.remove(f"{path_video}/output.mp4")
                 os.remove(f"{path_voice}/outputaudio.mp3")
@@ -126,7 +124,7 @@ def generate_voice(path:str,script:list):
     for i in range(0,len(script)):
         # Text
         text = f'{script[i][1]}'
-        engine.save_to_file(text, f'{path}/voice{i+1}')
+        engine.save_to_file(text, f'{path}/voice{i+1}.mp3')
         engine.runAndWait()
         
 #generte video
@@ -134,14 +132,18 @@ def generate_video(path_video:str,path_image:str,path_voice:str,length:int):
     video_clips=[]
     audio_clips=[]
     for i in range(length):
-        with wave.open(f'{path_voice}/voice{i+1}', 'r') as audio_file:
-            frame_rate = audio_file.getframerate()
-            n_frames = audio_file.getnframes()
-            duration = n_frames / float(frame_rate)
-        myclip = ImageClip(f"{path_image}/img{i+1}.jpeg", duration=int(duration))
+        # Load the MP3 file
+        audio = AudioSegment.from_mp3("example.mp3")
+
+        # Calculate duration (in milliseconds)
+        duration_ms = len(audio)
+
+        # Convert duration to seconds
+        duration_sec = duration_ms / 1000
+        myclip = ImageClip(f"{path_image}/img{i+1}.jpeg", duration=int(duration_sec))
         myclip.write_videofile(f"{path_video}/video{i+1}.mp4", codec="libx264", fps=24)
         video_clips.append(VideoFileClip(f"{path_video}/video{i+1}.mp4"))
-        audio_clips.append(AudioFileClip(f"{path_voice}/voice{i+1}"))
+        audio_clips.append(AudioFileClip(f"{path_voice}/voice{i+1}.mp3"))
     final_clip_audio = concatenate_audioclips(audio_clips)
     final_clip_audio.write_audiofile(f"{path_voice}/outputaudio.mp3")
     final_clip_video = concatenate_videoclips(video_clips, method="compose", padding=-1)
@@ -164,7 +166,7 @@ if __name__== '__main__':
     if platform.system() == "Windows":
         base_path = "C:/VIDEO_AI"
     else:
-        base_path = "/opt/render/project/src"
+        base_path = "/home/prayagv007/visumatebot"
     if not (os.path.exists(f"{base_path}/temp_audios")):
         os.mkdir(f"{base_path}/temp_audios")
     if not(os.path.exists(f"{base_path}/temp_images")):
