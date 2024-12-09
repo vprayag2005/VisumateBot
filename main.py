@@ -1,11 +1,11 @@
 import google.generativeai as genai
 import os
 import requests
-import pyttsx3
 import platform
 import time
 import wave
-import logging
+from gtts import gTTS
+from mutagen.mp3 import MP3
 from PIL import Image
 from apscheduler.schedulers.blocking import BlockingScheduler
 from moviepy import VideoFileClip, CompositeVideoClip,CompositeAudioClip, vfx, ImageClip, concatenate_videoclips,concatenate_audioclips, AudioFileClip
@@ -16,7 +16,6 @@ from dotenv import load_dotenv
 from keep_alive import keep_alive
 
 keep_alive()
-logging.basicConfig(level=logging.DEBUG)
 load_dotenv()
 
 TOKEN:Final=os.getenv("API_KEY")
@@ -26,20 +25,7 @@ user_list:list=[]
 
 #telegram bot start commands
 async def startcommand(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        engine = pyttsx3.init(driverName='espeak')
-        logging.debug("TTS engine initialized.")
-        
-        voices = engine.getProperty('voices')
-        logging.debug(f"Available voices: {len(voices)}")
-        
-        for voice in voices:
-            logging.debug(f"Voice ID: {voice.id}, Name: {voice.name}")
-        
-        await update.message.reply_text("Hi, I'm VisumateBot! Share your topic, and I'll transform it into an amazing video for you.")
-    except Exception as e:
-        logging.error(f"Error during TTS initialization: {e}")
-        await update.message.reply_text("Sorry, I couldn't initialize speech synthesis.")
+    await update.message.reply_text("Hi, I'm VisumateBot! Share your topic, and I'll transform it into an amazing video for you.")
 
 async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
     try:
@@ -76,7 +62,7 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
                 for i in range (0,len(script_video)):
                     os.remove(f'{path_image}/img{i+1}.jpeg')
                     os.remove(f'{path_video}/video{i+1}.mp4')
-                    os.remove(f'{path_voice}/voice{i+1}')
+                    os.remove(f'{path_voice}/voice{i+1}.mp3')
                 os.remove(f"{path_video}/video.mp4")
                 os.remove(f"{path_video}/output.mp4")
                 os.remove(f"{path_voice}/outputaudio.mp3")
@@ -132,31 +118,23 @@ def generate_image(path:str,script:list):
         
 #generates voices
 def generate_voice(path:str,script:list):
-    # Initialize
-    engine = pyttsx3.init()
-    # List voices
-    voices = engine.getProperty('voices')
-    # Set a realistic voice (e.g., index 0 or 1 for male/female)
-    engine.setProperty('voice', voices[0].id)
     for i in range(0,len(script)):
         # Text
         text = f'{script[i][1]}'
-        engine.save_to_file(text, f'{path}/voice{i+1}')
-        engine.runAndWait()
+        tts = gTTS(text, lang='en')
+        tts.save(f"{path}/voice{i+1}.mp3")
    
 #generte video
 def generate_video(path_video:str,path_image:str,path_voice:str,length:int):
     video_clips=[]
     audio_clips=[]
     for i in range(length):
-        with wave.open(f'{path_voice}/voice{i+1}', 'r') as audio_file:
-            frame_rate = audio_file.getframerate()
-            n_frames = audio_file.getnframes()
-            duration = n_frames / float(frame_rate)
+        audio_file = MP3(f"{path_voice}/voice{i+1}.mp3")
+        duration = audio_file.info.length
         myclip = ImageClip(f"{path_image}/img{i+1}.jpeg", duration=int(duration))
         myclip.write_videofile(f"{path_video}/video{i+1}.mp4", codec="libx264", fps=24)
         video_clips.append(VideoFileClip(f"{path_video}/video{i+1}.mp4"))
-        audio_clips.append(AudioFileClip(f"{path_voice}/voice{i+1}"))
+        audio_clips.append(AudioFileClip(f"{path_voice}/voice{i+1}.mp3"))
     final_clip_audio = concatenate_audioclips(audio_clips)
     final_clip_audio.write_audiofile(f"{path_voice}/outputaudio.mp3")
     final_clip_video = concatenate_videoclips(video_clips, method="compose", padding=-1)
