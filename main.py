@@ -11,7 +11,6 @@ from gtts import gTTS
 from mutagen.mp3 import MP3
 from PIL import Image
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.schedulers.blocking import BlockingScheduler
 from moviepy import VideoFileClip,CompositeAudioClip,ImageClip, concatenate_videoclips,concatenate_audioclips, AudioFileClip
 from typing import Final
 from telegram import Update
