@@ -49,10 +49,7 @@ landscapevideo=1
 portraitvideo=1
 video_generating:bool=True
 
-def telegram_bot(app: Application):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(app.run_polling(poll_interval=5))
+
 
 #telegram bot start commands
 async def startcommand(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -384,9 +381,6 @@ if __name__== '__main__':
     app.add_handler(conv_handler_landscape)
     #error
     app.add_error_handler(error)
-    telegram_thread = threading.Thread(target=telegram_bot, args=(app,))
-    telegram_thread.start()
     
-    # Keep the main thread alive
-    while True:
-        sleep(60)
+    # Start the bot
+    app.run_polling(poll_interval=5)
