@@ -5,6 +5,8 @@ import platform
 import threading
 from time import sleep
 from typing import Final
+import json
+import logging
 
 import google.generativeai as genai
 import requests
@@ -12,7 +14,6 @@ from dotenv import load_dotenv
 from gtts import gTTS
 from mutagen.mp3 import MP3
 from PIL import Image
-from apscheduler.schedulers.background import BackgroundScheduler
 from moviepy import (
     AudioFileClip,
     CompositeAudioClip,
@@ -34,6 +35,9 @@ from telegram.ext import (
 
 load_dotenv()
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 TOKEN:Final=os.getenv("TELEGRAM_API_KEY")
 BOT_USERNAME:Final=os.getenv("BOT_USERNAME")
 GEMINI_API_KEY:Final=os.getenv("GEMINI_API_KEY")
@@ -50,11 +54,6 @@ def telegram_bot(app: Application):
     asyncio.set_event_loop(loop)
     loop.run_until_complete(app.run_polling(poll_interval=5))
 
-def reset_userlist():
-    scheduler1 = BackgroundScheduler()
-    scheduler1.add_job(id='Scheduled task', func=limit_user, trigger='interval', minutes=5)
-    scheduler1.start()
-
 #telegram bot start commands
 async def startcommand(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hi, I'm VisumateBot! Share your topic, and I'll transform it into an amazing video for you.")
@@ -64,46 +63,50 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
         global video_generating
         global user_list
         global text_list
+        user_id=update.message.chat.id
         if(len(user_list)<4 and video_generating and len(text_list)!=0):
-            user_id=update.message.chat.id
             user_list.append(user_id)
             option=update.message.text
             time:str="5 minutes"
             video_generating=False
-            if platform.system() == "Windows":
-                base_path = "C:/VIDEO_AI/"
-            else:
-                base_path = "/home/Victoryverse/"
-            path_image = os.path.join(base_path,f'landscapevideo/temp_images/{user_id}')
-            path_voice =  os.path.join(base_path,f'landscapevideo/temp_audios/{user_id}')
-            path_video =  os.path.join(base_path,f'landscapevideo/temp_videos/{user_id}')
-            #removing any previous files left due to network issues or other failures
-            remove_files(path_image,path_video,path_voice)
-            if(option=="1"):
-                option="Normal video"
-            elif(option=="2"):
-                option="YouTube video"
-            else:
-                await update.message.reply_text("Please choose the correct option. You selected an invalid option.")
-                return await video_category_selection_landscape(update,context)
-            text:str=""
-            for i in text_list:
-                text+=f'{i} '
-            await update.message.reply_text("Generating a script for a captivating landscape video.")
-            script_video=script(text,option,time)
-            await update.message.reply_text("Script generated successfully.")
-            os.mkdir(path_image)
-            os.mkdir(path_voice)
-            os.mkdir(path_video)
-            await update.message.reply_text("Searching for the perfect images for your video.")
-            generate_image(path_image,script_video,"landscape")
-            await update.message.reply_text("Images found successfully.")
-            await update.message.reply_text("Generating the voice-over for your video.")
-            generate_voice(path_voice,script_video)
-            await update.message.reply_text("Voice-over generated successfully.")
-            await update.message.reply_text("Combining all elements to create your video.")
-            threading.Thread(target=generate_video, args=(path_video, path_image, path_voice, len(script_video), update)).start()
-            ConversationHandler.END
+            try:
+                base_path = os.path.join(os.getcwd(), "temp_data")
+                path_image = os.path.join(base_path,f'landscapevideo/temp_images/{user_id}')
+                path_voice =  os.path.join(base_path,f'landscapevideo/temp_audios/{user_id}')
+                path_video =  os.path.join(base_path,f'landscapevideo/temp_videos/{user_id}')
+                #removing any previous files left due to network issues or other failures
+                remove_files(path_image,path_video,path_voice)
+                if(option=="1"):
+                    option="Normal video"
+                elif(option=="2"):
+                    option="YouTube video"
+                else:
+                    await update.message.reply_text("Please choose the correct option. You selected an invalid option.")
+                    video_generating=True
+                    if user_id in user_list: user_list.remove(user_id)
+                    return await video_category_selection_landscape(update,context)
+                text:str=""
+                for i in text_list:
+                    text+=f'{i} '
+                await update.message.reply_text("Generating a script for a captivating landscape video.")
+                script_video=script(text,option,time)
+                await update.message.reply_text("Script generated successfully.")
+                os.makedirs(path_image, exist_ok=True)
+                os.makedirs(path_voice, exist_ok=True)
+                os.makedirs(path_video, exist_ok=True)
+                await update.message.reply_text("Searching for the perfect images for your video.")
+                generate_image(path_image,script_video,"landscape")
+                await update.message.reply_text("Images found successfully.")
+                await update.message.reply_text("Generating the voice-over for your video.")
+                generate_voice(path_voice,script_video)
+                await update.message.reply_text("Voice-over generated successfully.")
+                await update.message.reply_text("Combining all elements to create your video.")
+                threading.Thread(target=generate_video, args=(path_video, path_image, path_voice, len(script_video), update, user_id)).start()
+                ConversationHandler.END
+            except Exception as e:
+                video_generating=True
+                if user_id in user_list: user_list.remove(user_id)
+                raise e
         else:
             if(len(text_list)==0):
                 await update.message.reply_text("To create a landscape video, send the command /landscapevideo followed by your topic sentence.")
@@ -111,57 +114,62 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
              await update.message.reply_text("Server is busy please try after some times")
 
     except Exception as e:
-        print(e)
+        logger.error(f"Error in landscapevideocommand: {e}")
+        await update.message.reply_text("An unexpected error occurred while processing your request.")
       
 async def portraitvideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE): 
     try:
         global video_generating
         global user_list
         global text_list
+        user_id=update.message.chat.id
         if(len(user_list)<4 and video_generating and len(text_list)!=0):
-            user_id=update.message.chat.id
             user_list.append(user_id)
             video_generating=False
             time:str="60 second"
             option=update.message.text
-            if platform.system() == "Windows":
-                base_path = "C:/VIDEO_AI/"
-            else:
-                base_path = "/home/Victoryverse/"
-            path_image = os.path.join(base_path,f'portraitvideo/temp_images/{user_id}')
-            path_voice =  os.path.join(base_path,f'portraitvideo/temp_audios/{user_id}')
-            path_video =  os.path.join(base_path,f'portraitvideo/temp_videos/{user_id}')
-            
-            #Removing any previous files left due to network issues or other failures
-            remove_files(path_image,path_video,path_voice)
-            if(option=="1"):
-                option="Normal video"
-            elif(option=="2"):
-                option="YouTube shorts"
-            elif(option=="3"):
-                option="Instagram reel"
-            else:
-                await update.message.reply_text("Please choose the correct option. You selected an invalid option.")
-                return await video_category_selection_portrait(update,context)
-            text:str=""
-            for i in text_list:
-                text+=f'{i} '
-            await update.message.reply_text("Generating a script for a captivating portrait video.")
-            script_video=script(text,option,time)
-            await update.message.reply_text("Script generated successfully")
-            os.mkdir(path_image)
-            os.mkdir(path_voice)
-            os.mkdir(path_video)
-            await update.message.reply_text("Searching for the perfect images for your video.")
-            generate_image(path_image,script_video,"portrait")
-            await update.message.reply_text("Images found successfully.")
-            await update.message.reply_text("Generating the voice-over for your video")
-            generate_voice(path_voice,script_video)
-            await update.message.reply_text("Voice-over generated successfully.")
-            await update.message.reply_text("Combining all elements to create your video.")
-            # Create and start the thread
-            threading.Thread(target=generate_video, args=(path_video, path_image, path_voice, len(script_video), update)).start()
-            ConversationHandler.END
+            try:
+                base_path = os.path.join(os.getcwd(), "temp_data")
+                path_image = os.path.join(base_path,f'portraitvideo/temp_images/{user_id}')
+                path_voice =  os.path.join(base_path,f'portraitvideo/temp_audios/{user_id}')
+                path_video =  os.path.join(base_path,f'portraitvideo/temp_videos/{user_id}')
+                
+                #Removing any previous files left due to network issues or other failures
+                remove_files(path_image,path_video,path_voice)
+                if(option=="1"):
+                    option="Normal video"
+                elif(option=="2"):
+                    option="YouTube shorts"
+                elif(option=="3"):
+                    option="Instagram reel"
+                else:
+                    await update.message.reply_text("Please choose the correct option. You selected an invalid option.")
+                    video_generating=True
+                    if user_id in user_list: user_list.remove(user_id)
+                    return await video_category_selection_portrait(update,context)
+                text:str=""
+                for i in text_list:
+                    text+=f'{i} '
+                await update.message.reply_text("Generating a script for a captivating portrait video.")
+                script_video=script(text,option,time)
+                await update.message.reply_text("Script generated successfully")
+                os.makedirs(path_image, exist_ok=True)
+                os.makedirs(path_voice, exist_ok=True)
+                os.makedirs(path_video, exist_ok=True)
+                await update.message.reply_text("Searching for the perfect images for your video.")
+                generate_image(path_image,script_video,"portrait")
+                await update.message.reply_text("Images found successfully.")
+                await update.message.reply_text("Generating the voice-over for your video")
+                generate_voice(path_voice,script_video)
+                await update.message.reply_text("Voice-over generated successfully.")
+                await update.message.reply_text("Combining all elements to create your video.")
+                # Create and start the thread
+                threading.Thread(target=generate_video, args=(path_video, path_image, path_voice, len(script_video), update, user_id)).start()
+                ConversationHandler.END
+            except Exception as e:
+                video_generating=True
+                if user_id in user_list: user_list.remove(user_id)
+                raise e
         
         else:
             if(len(text_list)==0):
@@ -170,8 +178,8 @@ async def portraitvideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("Server is busy please try after some times")
 
     except Exception as e:
-        print(e)
-        await update.message.reply_text(e)
+        logger.error(f"Error in portraitvideocommand: {e}")
+        await update.message.reply_text("An unexpected error occurred while processing your request.")
 async def video_category_selection_landscape(update:Update,context:ContextTypes.DEFAULT_TYPE):
     global text_list
     text_list=context.args
@@ -239,19 +247,31 @@ def remove_files(path_image:str,path_video:str,path_voice:str):
 # script generater
 def script(topic:str,option:str,time:str)->list:
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-    response = model.generate_content(f'''Create a {time} {option} script structured as a scene-by-scene voiceover, with corresponding image suggestions for each scene. Focus on the topic: '{topic}' Present the script in a 2D array format as follows: [[scene1, voiceover1, image suggestion1], [scene2, voiceover2, image suggestion2], ...]. Provide only the 2D array in python.''')
-    cleaned_text = response.text.replace("```python", "").replace("```", "").strip()
-    video_script_array = eval(cleaned_text.split('=', 1)[1].strip())
+    model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+    response = model.generate_content(f'''Create a {time} {option} script structured as a scene-by-scene voiceover, with corresponding image suggestions for each scene. Focus on the topic: '{topic}' Present the script strictly as a valid JSON 2D array format as follows: [["scene1", "voiceover1", "image suggestion1"], ["scene2", "voiceover2", "image suggestion2"]]. Provide only the JSON output without markdown formatting.''')
+    cleaned_text = response.text.replace("```json", "").replace("```", "").strip()
+    video_script_array = json.loads(cleaned_text)
     return video_script_array
 
 # image generator
 def generate_image(path:str,script:list,orientation:str):
     for i in range (0,len(script)):
-        response=requests.get(f'https://api.unsplash.com/search/photos?client_id={UNSPLASH_API_KEY}&query={script[i][2]}&orientation={orientation}')
+        query = script[i][2] if len(script[i]) > 2 else "background"
+        response=requests.get(f'https://api.unsplash.com/search/photos?client_id={UNSPLASH_API_KEY}&query={query}&orientation={orientation}')
+        
+        image_url = None
         if response.status_code == 200:
-            response=response.json()
-            image_url=response["results"][0]["urls"]["full"]
+            res_json=response.json()
+            if len(res_json.get("results", [])) > 0:
+                image_url=res_json["results"][0]["urls"]["full"]
+                
+        if not image_url:
+            # Fallback query if the specific one fails
+            response=requests.get(f'https://api.unsplash.com/search/photos?client_id={UNSPLASH_API_KEY}&query=background&orientation={orientation}')
+            if response.status_code == 200 and len(response.json().get("results", [])) > 0:
+                image_url=response.json()["results"][0]["urls"]["full"]
+
+        if image_url:
             data = requests.get(image_url).content
             with open(f'{path}/img{i+1}.jpeg', 'wb') as f:
                 f.write(data)
@@ -264,6 +284,13 @@ def generate_image(path:str,script:list,orientation:str):
             else:
                 resized_image = image.resize((1920,1080))
             resized_image.save(f'{path}/img{i+1}.jpeg')
+        else:
+            # Ultimate fallback if no images found at all (solid color)
+            if orientation == "portrait":
+                img = Image.new('RGB', (1080, 1920), color = 'black')
+            else:
+                img = Image.new('RGB', (1920, 1080), color = 'black')
+            img.save(f'{path}/img{i+1}.jpeg')
 
 #generates voices
 def generate_voice(path:str,script:list):
@@ -274,74 +301,64 @@ def generate_voice(path:str,script:list):
         tts.save(f"{path}/voice{i+1}.mp3")
 
 #generte video
-def generate_video(path_video:str,path_image:str,path_voice:str,length:int,update:Update):
-    video_clips=[]
-    audio_clips=[]
-    for i in range(length):
-        audio_file = MP3(f"{path_voice}/voice{i+1}.mp3")
-        duration = audio_file.info.length
-        myclip = ImageClip(f"{path_image}/img{i+1}.jpeg", duration=int(duration))
-        myclip.write_videofile(f"{path_video}/video{i+1}.mp4", codec="libx264", fps=24)
-        video_clips.append(VideoFileClip(f"{path_video}/video{i+1}.mp4"))
-        audio_clips.append(AudioFileClip(f"{path_voice}/voice{i+1}.mp3"))
-        sleep(60)
-    final_clip_audio = concatenate_audioclips(audio_clips)
-    final_clip_audio.write_audiofile(f"{path_voice}/outputaudio.mp3")
-    final_clip_video = concatenate_videoclips(video_clips, method="compose", padding=-1)
-    final_clip_video.write_videofile(f"{path_video}/output.mp4", codec="libx264", fps=24)
-    videoclip = VideoFileClip(f"{path_video}/output.mp4")
-    audioclip = AudioFileClip(f"{path_voice}/outputaudio.mp3")
-    new_audioclip = CompositeAudioClip([audioclip])
-    videoclip.audio = new_audioclip
-    videoclip.write_videofile(f"{path_video}/video.mp4")
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)  
-    loop.run_until_complete(video_sent(update, path_video, path_image, path_voice))
+def generate_video(path_video:str,path_image:str,path_voice:str,length:int,update:Update,user_id:int):
+    try:
+        video_clips=[]
+        audio_clips=[]
+        for i in range(length):
+            audio_file = MP3(f"{path_voice}/voice{i+1}.mp3")
+            duration = audio_file.info.length
+            myclip = ImageClip(f"{path_image}/img{i+1}.jpeg", duration=int(duration))
+            myclip.write_videofile(f"{path_video}/video{i+1}.mp4", codec="libx264", fps=24)
+            video_clips.append(VideoFileClip(f"{path_video}/video{i+1}.mp4"))
+            audio_clips.append(AudioFileClip(f"{path_voice}/voice{i+1}.mp3"))
+            sleep(60)
+        final_clip_audio = concatenate_audioclips(audio_clips)
+        final_clip_audio.write_audiofile(f"{path_voice}/outputaudio.mp3")
+        final_clip_video = concatenate_videoclips(video_clips, method="compose", padding=-1)
+        final_clip_video.write_videofile(f"{path_video}/output.mp4", codec="libx264", fps=24)
+        videoclip = VideoFileClip(f"{path_video}/output.mp4")
+        audioclip = AudioFileClip(f"{path_voice}/outputaudio.mp3")
+        new_audioclip = CompositeAudioClip([audioclip])
+        videoclip.audio = new_audioclip
+        videoclip.write_videofile(f"{path_video}/video.mp4")
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)  
+        loop.run_until_complete(video_sent(update, path_video, path_image, path_voice))
+    except Exception as e:
+        logger.error(f"Error in generate_video: {e}")
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(update.message.reply_text("An error occurred during video generation."))
+    finally:
+        global video_generating
+        video_generating = True
+        if user_id in user_list:
+            user_list.remove(user_id)
 
 # sending video to user
 async def video_sent(update:Update,path_video:str,path_image:str,path_voice:str):
     sleep(100)
-    global video_generating
     with open(f"{path_video}/video.mp4", 'rb') as video_file:
         video = InputFile(video_file)
         await update.message.reply_video(video)
     remove_files(path_image,path_video,path_voice)
     await update.message.reply_text("Video generated successfully.")
-    video_generating=True
-    
-#userlimit    
-def limit_user():
-    for i in user_list:
-        user_list.remove(i)
 
 #fetch errors
 async def error(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    print(f'update {update} caused error {context.error}')
+    logger.error(f'update {update} caused error {context.error}')
 
 if __name__== '__main__':
 
-    if platform.system() == "Windows":
-        base_path = "C:/VIDEO_AI"
-    else:
-        base_path = "/home/Victoryverse"
-    if not (os.path.exists(f"{base_path}/landscapevideo")):
-        os.mkdir(f"{base_path}/landscapevideo")
-    if not (os.path.exists(f"{base_path}/portraitvideo")):
-        os.mkdir(f"{base_path}/portraitvideo")
-        
-    if (os.path.exists(f"{base_path}/landscapevideo") and not(os.path.exists(f"{base_path}/landscapevideo/temp_audios"))):
-        os.mkdir(f"{base_path}/landscapevideo/temp_audios")
-    if (os.path.exists(f"{base_path}/landscapevideo") and not(os.path.exists(f"{base_path}/landscapevideo/temp_videos"))):
-        os.mkdir(f"{base_path}/landscapevideo/temp_videos")
-    if (os.path.exists(f"{base_path}/landscapevideo") and not(os.path.exists(f"{base_path}/landscapevideo/temp_images"))):
-        os.mkdir(f"{base_path}/landscapevideo/temp_images")
+    base_path = os.path.join(os.getcwd(), "temp_data")
+    os.makedirs(f"{base_path}/landscapevideo/temp_audios", exist_ok=True)
+    os.makedirs(f"{base_path}/landscapevideo/temp_videos", exist_ok=True)
+    os.makedirs(f"{base_path}/landscapevideo/temp_images", exist_ok=True)
 
-    if (os.path.exists(f"{base_path}/portraitvideo") and not(os.path.exists(f"{base_path}/portraitvideo/temp_audios"))):
-        os.mkdir(f"{base_path}/portraitvideo/temp_audios")
-    if (os.path.exists(f"{base_path}/portraitvideo") and not(os.path.exists(f"{base_path}/portraitvideo/temp_videos"))):
-        os.mkdir(f"{base_path}/portraitvideo/temp_videos")
-    if (os.path.exists(f"{base_path}/portraitvideo") and not(os.path.exists(f"{base_path}/portraitvideo/temp_images"))):
-        os.mkdir(f"{base_path}/portraitvideo/temp_images")
+    os.makedirs(f"{base_path}/portraitvideo/temp_audios", exist_ok=True)
+    os.makedirs(f"{base_path}/portraitvideo/temp_videos", exist_ok=True)
+    os.makedirs(f"{base_path}/portraitvideo/temp_images", exist_ok=True)
     app= Application.builder().token(TOKEN).read_timeout(3600).build()
 
     #commands
@@ -369,9 +386,6 @@ if __name__== '__main__':
     app.add_error_handler(error)
     telegram_thread = threading.Thread(target=telegram_bot, args=(app,))
     telegram_thread.start()
-
-    reset_thread = threading.Thread(target=reset_userlist)
-    reset_thread.start()
     
     # Keep the main thread alive
     while True:

@@ -1,0 +1,27 @@
+# Environments
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary data and generated files
+temp_data/
+*.mp3
+*.mp4
+*.jpeg
+*.jpg
+*.png
+
+# VS Code
+.vscode/
+
+# IDEs
+.idea/
