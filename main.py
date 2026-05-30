@@ -336,7 +336,6 @@ def generate_video(path_video:str,path_image:str,path_voice:str,length:int,updat
             video_clips.append(vid_clip)
             
             audio_clips.append(AudioFileClip(f"{path_voice}/voice{i+1}.mp3"))
-            sleep(60)
         final_clip_audio = concatenate_audioclips(audio_clips)
         final_clip_audio.write_audiofile(f"{path_voice}/outputaudio.mp3")
         final_clip_video = concatenate_videoclips(video_clips, method="compose", padding=-1)
@@ -362,7 +361,6 @@ def generate_video(path_video:str,path_image:str,path_voice:str,length:int,updat
 
 # sending video to user
 async def video_sent(update:Update,path_video:str,path_image:str,path_voice:str):
-    sleep(100)
     with open(f"{path_video}/video.mp4", 'rb') as video_file:
         video = InputFile(video_file)
         await update.message.reply_video(video)
