@@ -3,7 +3,6 @@ import itertools
 import os
 import platform
 import threading
-from time import sleep
 from typing import Final
 import json
 import logging
@@ -64,7 +63,6 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
         if(len(user_list)<4 and video_generating and len(text_list)!=0):
             user_list.append(user_id)
             option=update.message.text
-            time:str="5 minutes"
             video_generating=False
             try:
                 base_path = os.path.join(os.getcwd(), "temp_data")
@@ -82,9 +80,14 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
                     video_generating=True
                     if user_id in user_list: user_list.remove(user_id)
                     return await video_category_selection_landscape(update,context)
-                text:str=""
-                for i in text_list:
-                    text+=f'{i} '
+                time = "5 minutes" # default
+                topic_words = text_list
+                
+                if len(text_list) >= 2 and text_list[0].isdigit() and text_list[1].lower() in ["minute", "minutes", "second", "seconds", "min", "mins", "sec", "secs"]:
+                    time = f"{text_list[0]} {text_list[1]}"
+                    topic_words = text_list[2:]
+                    
+                text:str=" ".join(topic_words)
                 await update.message.reply_text("Generating a script for a captivating landscape video.")
                 script_video=script(text,option,time)
                 await update.message.reply_text("Script generated successfully.")
@@ -123,7 +126,6 @@ async def portraitvideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
         if(len(user_list)<4 and video_generating and len(text_list)!=0):
             user_list.append(user_id)
             video_generating=False
-            time:str="60 second"
             option=update.message.text
             try:
                 base_path = os.path.join(os.getcwd(), "temp_data")
@@ -144,9 +146,14 @@ async def portraitvideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
                     video_generating=True
                     if user_id in user_list: user_list.remove(user_id)
                     return await video_category_selection_portrait(update,context)
-                text:str=""
-                for i in text_list:
-                    text+=f'{i} '
+                time = "60 seconds" # default
+                topic_words = text_list
+                
+                if len(text_list) >= 2 and text_list[0].isdigit() and text_list[1].lower() in ["minute", "minutes", "second", "seconds", "min", "mins", "sec", "secs"]:
+                    time = f"{text_list[0]} {text_list[1]}"
+                    topic_words = text_list[2:]
+                    
+                text:str=" ".join(topic_words)
                 await update.message.reply_text("Generating a script for a captivating portrait video.")
                 script_video=script(text,option,time)
                 await update.message.reply_text("Script generated successfully")
