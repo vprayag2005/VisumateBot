@@ -3,6 +3,7 @@ import itertools
 import os
 import platform
 import threading
+import random
 from typing import Final
 import json
 import logging
@@ -95,7 +96,7 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
                 os.makedirs(path_voice, exist_ok=True)
                 os.makedirs(path_video, exist_ok=True)
                 await update.message.reply_text("Searching for the perfect images for your video.")
-                generate_image(path_image,script_video,"landscape")
+                generate_image(path_image,script_video,"landscape",text)
                 await update.message.reply_text("Images found successfully.")
                 await update.message.reply_text("Generating the voice-over for your video.")
                 generate_voice(path_voice,script_video)
@@ -161,7 +162,7 @@ async def portraitvideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
                 os.makedirs(path_voice, exist_ok=True)
                 os.makedirs(path_video, exist_ok=True)
                 await update.message.reply_text("Searching for the perfect images for your video.")
-                generate_image(path_image,script_video,"portrait")
+                generate_image(path_image,script_video,"portrait",text)
                 await update.message.reply_text("Images found successfully.")
                 await update.message.reply_text("Generating the voice-over for your video")
                 generate_voice(path_voice,script_video)
@@ -258,7 +259,7 @@ def script(topic:str,option:str,time:str)->list:
     return video_script_array
 
 # image generator
-def generate_image(path:str,script:list,orientation:str):
+def generate_image(path:str,script:list,orientation:str,topic:str):
     headers = {
         'User-Agent': 'VisumateBot/1.0 (https://github.com/vprayag2005/VisumateBot)'
     }
@@ -270,7 +271,7 @@ def generate_image(path:str,script:list,orientation:str):
             "generator": "search",
             "gsrsearch": f"filetype:bitmap {search_term}",
             "gsrnamespace": "6",
-            "gsrlimit": "1",
+            "gsrlimit": "20",
             "prop": "imageinfo",
             "iiprop": "url",
             "format": "json"
@@ -280,20 +281,27 @@ def generate_image(path:str,script:list,orientation:str):
             if res.status_code == 200:
                 data = res.json()
                 pages = data.get("query", {}).get("pages", {})
+                urls = []
                 for _, page_info in pages.items():
                     if "imageinfo" in page_info:
-                        return page_info["imageinfo"][0]["url"]
+                        urls.append(page_info["imageinfo"][0]["url"])
+                if urls:
+                    return random.choice(urls)
         except Exception as e:
             logger.error(f"Error fetching from Wikimedia: {e}")
         return None
 
     for i in range (0,len(script)):
-        query = script[i][2] if len(script[i]) > 2 else "background"
+        query = script[i][2] if len(script[i]) > 2 else topic
         image_url = get_wiki_image(query)
                 
         if not image_url:
-            # Fallback query if the specific one fails
-            image_url = get_wiki_image("background")
+            # Fallback query to the main topic
+            image_url = get_wiki_image(topic)
+            
+        if not image_url:
+            # Ultimate fallback if topic fails
+            image_url = get_wiki_image("nature")
 
         if image_url:
             data = requests.get(image_url, headers=headers).content
