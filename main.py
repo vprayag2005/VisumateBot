@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 TOKEN:Final=os.getenv("TELEGRAM_API_KEY")
 BOT_USERNAME:Final=os.getenv("BOT_USERNAME")
 GEMINI_API_KEY:Final=os.getenv("GEMINI_API_KEY")
+PEXELS_API_KEY:Final=os.getenv("PEXELS_API_KEY")
 
 user_list:list=[]
 text_list:list
@@ -279,50 +280,48 @@ def script(topic:str,option:str,time:str)->list:
 # image generator
 def generate_image(path:str,script:list,orientation:str,topic:str):
     headers = {
-        'User-Agent': 'VisumateBot/1.0 (https://github.com/vprayag2005/VisumateBot)'
+        'Authorization': PEXELS_API_KEY
     }
 
-    def get_wiki_image(search_term):
-        url = "https://commons.wikimedia.org/w/api.php"
+    def get_pexels_image(search_term):
+        if not PEXELS_API_KEY:
+            logger.error("PEXELS_API_KEY is not set.")
+            return None
+            
+        url = "https://api.pexels.com/v1/search"
         params = {
-            "action": "query",
-            "generator": "search",
-            "gsrsearch": f"filetype:bitmap {search_term}",
-            "gsrnamespace": "6",
-            "gsrlimit": "20",
-            "prop": "imageinfo",
-            "iiprop": "url",
-            "format": "json"
+            "query": search_term,
+            "per_page": 15,
+            "orientation": orientation
         }
         try:
             res = requests.get(url, params=params, headers=headers)
             if res.status_code == 200:
                 data = res.json()
-                pages = data.get("query", {}).get("pages", {})
-                urls = []
-                for _, page_info in pages.items():
-                    if "imageinfo" in page_info:
-                        urls.append(page_info["imageinfo"][0]["url"])
-                if urls:
-                    return random.choice(urls)
+                photos = data.get("photos", [])
+                if photos:
+                    # Choose a random photo from the top results
+                    photo = random.choice(photos)
+                    return photo["src"]["large"]
         except Exception as e:
-            logger.error(f"Error fetching from Wikimedia: {e}")
+            logger.error(f"Error fetching from Pexels: {e}")
         return None
 
     for i in range (0,len(script)):
         query = script[i][2] if len(script[i]) > 2 else topic
-        image_url = get_wiki_image(query)
+        image_url = get_pexels_image(query)
                 
         if not image_url:
             # Fallback query to the main topic
-            image_url = get_wiki_image(topic)
+            image_url = get_pexels_image(topic)
             
         if not image_url:
             # Ultimate fallback if topic fails
-            image_url = get_wiki_image("nature")
+            image_url = get_pexels_image("nature")
 
         if image_url:
-            data = requests.get(image_url, headers=headers).content
+            # Download the image without specific headers for the actual image file
+            data = requests.get(image_url).content
             with open(f'{path}/img{i+1}.jpeg', 'wb') as f:
                 f.write(data)
             #Open an image
