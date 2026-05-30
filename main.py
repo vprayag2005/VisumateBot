@@ -261,7 +261,7 @@ def generate_image(path:str,script:list,orientation:str):
         params = {
             "action": "query",
             "generator": "search",
-            "gsrsearch": f"filetype:bitmap|drawing {search_term}",
+            "gsrsearch": f"filetype:bitmap {search_term}",
             "gsrnamespace": "6",
             "gsrlimit": "1",
             "prop": "imageinfo",
@@ -289,7 +289,7 @@ def generate_image(path:str,script:list,orientation:str):
             image_url = get_wiki_image("background")
 
         if image_url:
-            data = requests.get(image_url).content
+            data = requests.get(image_url, headers=headers).content
             with open(f'{path}/img{i+1}.jpeg', 'wb') as f:
                 f.write(data)
             #Open an image
