@@ -82,12 +82,21 @@ async def landscapevideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE)
                     if user_id in user_list: user_list.remove(user_id)
                     return await video_category_selection_landscape(update,context)
                 time = "5 minutes" # default
-                topic_words = text_list
+                topic_words = []
+                found_time = False
                 
-                if len(text_list) >= 2 and text_list[0].isdigit() and text_list[1].lower() in ["minute", "minutes", "second", "seconds", "min", "mins", "sec", "secs"]:
-                    time = f"{text_list[0]} {text_list[1]}"
-                    topic_words = text_list[2:]
-                    
+                i = 0
+                while i < len(text_list):
+                    if not found_time and text_list[i].isdigit() and i + 1 < len(text_list) and text_list[i+1].lower() in ["minute", "minutes", "second", "seconds", "min", "mins", "sec", "secs"]:
+                        time = f"{text_list[i]} {text_list[i+1]}"
+                        found_time = True
+                        i += 2
+                        if i < len(text_list) and text_list[i].lower() == "video":
+                            i += 1
+                    else:
+                        topic_words.append(text_list[i])
+                        i += 1
+                        
                 text:str=" ".join(topic_words)
                 await update.message.reply_text("Generating a script for a captivating landscape video.")
                 script_video=script(text,option,time)
@@ -148,12 +157,21 @@ async def portraitvideocommand(update:Update,context:ContextTypes.DEFAULT_TYPE):
                     if user_id in user_list: user_list.remove(user_id)
                     return await video_category_selection_portrait(update,context)
                 time = "60 seconds" # default
-                topic_words = text_list
+                topic_words = []
+                found_time = False
                 
-                if len(text_list) >= 2 and text_list[0].isdigit() and text_list[1].lower() in ["minute", "minutes", "second", "seconds", "min", "mins", "sec", "secs"]:
-                    time = f"{text_list[0]} {text_list[1]}"
-                    topic_words = text_list[2:]
-                    
+                i = 0
+                while i < len(text_list):
+                    if not found_time and text_list[i].isdigit() and i + 1 < len(text_list) and text_list[i+1].lower() in ["minute", "minutes", "second", "seconds", "min", "mins", "sec", "secs"]:
+                        time = f"{text_list[i]} {text_list[i+1]}"
+                        found_time = True
+                        i += 2
+                        if i < len(text_list) and text_list[i].lower() == "video":
+                            i += 1
+                    else:
+                        topic_words.append(text_list[i])
+                        i += 1
+                        
                 text:str=" ".join(topic_words)
                 await update.message.reply_text("Generating a script for a captivating portrait video.")
                 script_video=script(text,option,time)
