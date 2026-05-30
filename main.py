@@ -22,6 +22,7 @@ from moviepy import (
     concatenate_audioclips,
     concatenate_videoclips,
 )
+from moviepy.video.fx import CrossFadeIn
 from telegram import InputFile, Update
 from telegram.ext import (
     Application,
@@ -41,7 +42,6 @@ logger = logging.getLogger(__name__)
 TOKEN:Final=os.getenv("TELEGRAM_API_KEY")
 BOT_USERNAME:Final=os.getenv("BOT_USERNAME")
 GEMINI_API_KEY:Final=os.getenv("GEMINI_API_KEY")
-UNSPLASH_API_KEY:Final=os.getenv("UNSPLASH_API_KEY")
 
 user_list:list=[]
 text_list:list
@@ -252,21 +252,41 @@ def script(topic:str,option:str,time:str)->list:
 
 # image generator
 def generate_image(path:str,script:list,orientation:str):
+    headers = {
+        'User-Agent': 'VisumateBot/1.0 (https://github.com/vprayag2005/VisumateBot)'
+    }
+
+    def get_wiki_image(search_term):
+        url = "https://commons.wikimedia.org/w/api.php"
+        params = {
+            "action": "query",
+            "generator": "search",
+            "gsrsearch": f"filetype:bitmap|drawing {search_term}",
+            "gsrnamespace": "6",
+            "gsrlimit": "1",
+            "prop": "imageinfo",
+            "iiprop": "url",
+            "format": "json"
+        }
+        try:
+            res = requests.get(url, params=params, headers=headers)
+            if res.status_code == 200:
+                data = res.json()
+                pages = data.get("query", {}).get("pages", {})
+                for _, page_info in pages.items():
+                    if "imageinfo" in page_info:
+                        return page_info["imageinfo"][0]["url"]
+        except Exception as e:
+            logger.error(f"Error fetching from Wikimedia: {e}")
+        return None
+
     for i in range (0,len(script)):
         query = script[i][2] if len(script[i]) > 2 else "background"
-        response=requests.get(f'https://api.unsplash.com/search/photos?client_id={UNSPLASH_API_KEY}&query={query}&orientation={orientation}')
-        
-        image_url = None
-        if response.status_code == 200:
-            res_json=response.json()
-            if len(res_json.get("results", [])) > 0:
-                image_url=res_json["results"][0]["urls"]["full"]
+        image_url = get_wiki_image(query)
                 
         if not image_url:
             # Fallback query if the specific one fails
-            response=requests.get(f'https://api.unsplash.com/search/photos?client_id={UNSPLASH_API_KEY}&query=background&orientation={orientation}')
-            if response.status_code == 200 and len(response.json().get("results", [])) > 0:
-                image_url=response.json()["results"][0]["urls"]["full"]
+            image_url = get_wiki_image("background")
 
         if image_url:
             data = requests.get(image_url).content
@@ -305,9 +325,16 @@ def generate_video(path_video:str,path_image:str,path_voice:str,length:int,updat
         for i in range(length):
             audio_file = MP3(f"{path_voice}/voice{i+1}.mp3")
             duration = audio_file.info.length
-            myclip = ImageClip(f"{path_image}/img{i+1}.jpeg", duration=int(duration))
+            # Add 1 second to duration for overlap transition (except the last clip)
+            clip_duration = int(duration) + (1 if i < length - 1 else 0)
+            myclip = ImageClip(f"{path_image}/img{i+1}.jpeg", duration=clip_duration)
             myclip.write_videofile(f"{path_video}/video{i+1}.mp4", codec="libx264", fps=24)
-            video_clips.append(VideoFileClip(f"{path_video}/video{i+1}.mp4"))
+            
+            vid_clip = VideoFileClip(f"{path_video}/video{i+1}.mp4")
+            if i > 0:
+                vid_clip = vid_clip.with_effects([CrossFadeIn(1)])
+            video_clips.append(vid_clip)
+            
             audio_clips.append(AudioFileClip(f"{path_voice}/voice{i+1}.mp3"))
             sleep(60)
         final_clip_audio = concatenate_audioclips(audio_clips)
